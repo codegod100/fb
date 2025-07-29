@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::Json,
+    response::{Html, Json},
     routing::{get, post, put, delete},
     Router,
 };
@@ -14,6 +14,28 @@ use uuid::Uuid;
 
 type RedisPool = Arc<Client>;
 
+async fn serve_index() -> Html<String> {
+    let html = std::fs::read_to_string("frontend/dist/index.html")
+        .unwrap_or_else(|_| r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Task Manager</title>
+    <link href="./styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+    <script type="module">
+        import init from './frontend.js';
+        init();
+    </script>
+</body>
+</html>
+"#.to_string());
+    
+    Html(html)
+}
+
 #[tokio::main]
 async fn main() {
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
@@ -24,6 +46,11 @@ async fn main() {
     let app = Router::new()
         .route("/api/tasks", get(get_tasks).post(create_task))
         .route("/api/tasks/:id", get(get_task).put(update_task).delete(delete_task))
+        // Catch-all routes for client-side routing first
+        .route("/tasks", get(serve_index)) 
+        .route("/analytics", get(serve_index))
+        .route("/settings", get(serve_index))
+        // Then serve static files and root
         .nest_service("/", ServeDir::new("frontend/dist"))
         .layer(CorsLayer::permissive())
         .with_state(pool);
