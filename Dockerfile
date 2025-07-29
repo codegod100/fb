@@ -18,7 +18,7 @@ RUN cp index.html ./dist/
 # Build Tailwind CSS
 RUN npm run build-css
 
-FROM rust:1.75 AS rust-builder
+FROM rust:1.82 AS rust-builder
 
 # Install wasm-pack for frontend build
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
