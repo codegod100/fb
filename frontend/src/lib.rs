@@ -286,15 +286,17 @@ impl Application for Model {
                 Cmd::none()
             }
             Msg::DeleteTask(id) => {
-                // Set task as loading
-                self.task_loading_states.insert(id, true);
-                
-                Cmd::new(async move {
-                    match delete_task(id).await {
-                        Ok(_) => Msg::TaskDeleted(id),
-                        Err(e) => Msg::Error(e),
-                    }
-                })
+                if window().unwrap().confirm_with_message("Are you sure you want to delete this task?").unwrap() {
+                    self.task_loading_states.insert(id, true);
+                    Cmd::new(async move {
+                        match delete_task(id).await {
+                            Ok(_) => Msg::TaskDeleted(id),
+                            Err(e) => Msg::Error(e),
+                        }
+                    })
+                } else {
+                    Cmd::none()
+                }
             }
             Msg::TaskDeleted(id) => {
                 self.tasks.retain(|t| t.id != id);
@@ -345,30 +347,31 @@ impl Application for Model {
                 Cmd::none()
             }
             Msg::ClearCompleted => {
-                let completed_ids: Vec<Uuid> = self.tasks.iter()
-                    .filter(|t| t.completed)
-                    .map(|t| t.id)
-                    .collect();
-                
-                // Set all completed tasks as loading
-                for id in &completed_ids {
-                    self.task_loading_states.insert(*id, true);
+                if window().unwrap().confirm_with_message("Are you sure you want to clear all completed tasks?").unwrap() {
+                    let completed_ids: Vec<Uuid> = self.tasks.iter()
+                        .filter(|t| t.completed)
+                        .map(|t| t.id)
+                        .collect();
+                    
+                    for id in &completed_ids {
+                        self.task_loading_states.insert(*id, true);
+                    }
+                    
+                    self.tasks.retain(|t| !t.completed);
+                    
+                    Cmd::batch(
+                        completed_ids.into_iter()
+                            .map(|id| Cmd::new(async move {
+                                match delete_task(id).await {
+                                    Ok(_) => Msg::TaskDeleted(id),
+                                    Err(e) => Msg::Error(e),
+                                }
+                            }))
+                            .collect::<Vec<_>>(),
+                    )
+                } else {
+                    Cmd::none()
                 }
-                
-                // Remove completed tasks from local state immediately for responsive UI
-                self.tasks.retain(|t| !t.completed);
-                
-                // Send delete requests for all completed tasks
-                Cmd::batch(
-                    completed_ids.into_iter()
-                        .map(|id| Cmd::new(async move {
-                            match delete_task(id).await {
-                                Ok(_) => Msg::TaskDeleted(id), // This won't do anything since we already removed them
-                                Err(e) => Msg::Error(e),
-                            }
-                        }))
-                        .collect::<Vec<_>>()
-                )
             }
             Msg::ToggleCompletedSection => {
                 self.show_completed = !self.show_completed;
