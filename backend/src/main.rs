@@ -47,9 +47,8 @@ async fn main() {
         .route("/api/tasks", get(get_tasks).post(create_task))
         .route("/api/tasks/:id", get(get_task).put(update_task).delete(delete_task))
         // Catch-all routes for client-side routing first
+        .route("/dashboard", get(serve_index))
         .route("/tasks", get(serve_index)) 
-        .route("/analytics", get(serve_index))
-        .route("/settings", get(serve_index))
         // Then serve static files and root
         .nest_service("/", ServeDir::new("frontend/dist"))
         .layer(CorsLayer::permissive())
