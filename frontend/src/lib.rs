@@ -11,27 +11,21 @@ use web_sys::{console, window, Request, RequestInit, Response};
 pub enum Page {
     Dashboard,
     Tasks,
-    Analytics,
-    Settings,
 }
 
 impl Page {
     fn to_path(&self) -> &'static str {
         match self {
-            Page::Dashboard => "/",
-            Page::Tasks => "/tasks",
-            Page::Analytics => "/analytics", 
-            Page::Settings => "/settings",
+            Page::Tasks => "/",
+            Page::Dashboard => "/dashboard",
         }
     }
     
     fn from_path(path: &str) -> Self {
         match path {
-            "/" => Page::Dashboard,
-            "/tasks" => Page::Tasks,
-            "/analytics" => Page::Analytics,
-            "/settings" => Page::Settings,
-            _ => Page::Dashboard, // Default fallback
+            "/" => Page::Tasks,
+            "/dashboard" => Page::Dashboard,
+            _ => Page::Tasks, // Default fallback
         }
     }
 }
@@ -84,7 +78,7 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
-            current_page: Page::Dashboard,
+            current_page: Page::Tasks,
             tasks: Vec::new(),
             new_task_title: String::new(),
             new_task_description: String::new(),
@@ -403,8 +397,6 @@ impl Application for Model {
                         match self.current_page {
                             Page::Dashboard => self.view_dashboard(),
                             Page::Tasks => self.view_tasks_page(),
-                            Page::Analytics => self.view_analytics_page(),
-                            Page::Settings => self.view_settings_page(),
                         }
                     ]
                 )
@@ -420,10 +412,8 @@ impl Model {
                 div([class("flex items-center justify-between")], [
                     h1([class("text-2xl font-bold text-ctp-text")], [text("Full-Stack Rust Demo")]),
                     nav([class("flex space-x-8")], [
-                        self.nav_link("Dashboard", Page::Dashboard),
                         self.nav_link("Tasks", Page::Tasks),
-                        self.nav_link("Analytics", Page::Analytics),
-                        self.nav_link("Settings", Page::Settings),
+                        self.nav_link("Dashboard", Page::Dashboard),
                     ]),
                 ]),
             ]),
@@ -487,37 +477,6 @@ impl Model {
                     ]),
                 ]),
             ]),
-            
-            // Quick actions
-            div([class("bg-ctp-surface0 rounded-lg shadow-lg p-8 border border-ctp-surface1")], [
-                h3([class("text-2xl font-semibold text-ctp-text mb-6")], [text("Quick Actions")]),
-                div([class("flex flex-wrap gap-4")], [
-                    a([
-                        href(Page::Tasks.to_path()),
-                        on_click(|event| {
-                            event.prevent_default();
-                            Msg::NavigateTo(Page::Tasks)
-                        }),
-                        class("bg-ctp-blue hover:bg-ctp-sapphire text-ctp-base font-medium px-6 py-3 rounded-lg transition-colors duration-200 inline-block"),
-                    ], [text("Manage Tasks")]),
-                    a([
-                        href(Page::Analytics.to_path()),
-                        on_click(|event| {
-                            event.prevent_default();
-                            Msg::NavigateTo(Page::Analytics)
-                        }),
-                        class("bg-ctp-green hover:bg-ctp-teal text-ctp-base font-medium px-6 py-3 rounded-lg transition-colors duration-200 inline-block"),
-                    ], [text("View Analytics")]),
-                    a([
-                        href(Page::Settings.to_path()),
-                        on_click(|event| {
-                            event.prevent_default();
-                            Msg::NavigateTo(Page::Settings)
-                        }),
-                        class("bg-ctp-mauve hover:bg-ctp-lavender text-ctp-base font-medium px-6 py-3 rounded-lg transition-colors duration-200 inline-block"),
-                    ], [text("Settings")]),
-                ]),
-            ]),
         ])
     }
 
@@ -545,105 +504,6 @@ impl Model {
         ])
     }
 
-    fn view_analytics_page(&self) -> Node<Msg> {
-        div([class("space-y-6")], [
-            div([class("bg-ctp-surface0 rounded-lg shadow-lg p-8 border border-ctp-surface1")], [
-                h2([class("text-2xl font-bold text-ctp-text mb-6")], [text("Analytics Dashboard")]),
-                div([class("grid grid-cols-1 md:grid-cols-3 gap-6 mb-8")], [
-                    self.metric_card("Completion Rate", &format!("{}%", if self.tasks.is_empty() { 0 } else { (self.tasks.iter().filter(|t| t.completed).count() * 100) / self.tasks.len() })),
-                    self.metric_card("Average Task Length", &format!("{} chars", if self.tasks.is_empty() { 0 } else { self.tasks.iter().map(|t| t.description.len()).sum::<usize>() / self.tasks.len() })),
-                    self.metric_card("Most Active Hour", "10:00 AM"),
-                ]),
-                div([class("bg-ctp-surface1 rounded-lg p-6 border border-ctp-surface2")], [
-                    h3([class("text-lg font-semibold text-ctp-text mb-4")], [text("Task Status Distribution")]),
-                    div([class("space-y-3")], [
-                        self.progress_bar("Completed", self.tasks.iter().filter(|t| t.completed).count(), self.tasks.len(), "bg-ctp-green"),
-                        self.progress_bar("Pending", self.tasks.iter().filter(|t| !t.completed).count(), self.tasks.len(), "bg-ctp-yellow"),
-                    ]),
-                ]),
-            ]),
-        ])
-    }
-
-    fn metric_card(&self, card_title: &str, value: &str) -> Node<Msg> {
-        div([class("bg-ctp-surface1 rounded-lg p-6 text-center border border-ctp-surface2")], [
-            h3([class("text-sm font-medium text-ctp-subtext0 mb-2")], [text(card_title)]),
-            p([class("text-3xl font-bold text-ctp-text")], [text(value)]),
-        ])
-    }
-
-    fn progress_bar(&self, label: &str, value: usize, total: usize, color_class: &str) -> Node<Msg> {
-        let percentage = if total == 0 { 0 } else { (value * 100) / total };
-        div([class("flex items-center justify-between")], [
-            span([class("text-sm font-medium text-ctp-text")], [text(&format!("{} ({})", label, value))]),
-            div([class("flex-1 mx-4")], [
-                div([class("w-full bg-ctp-surface2 rounded-full h-2")], [
-                    div([
-                        class(&format!("{} h-2 rounded-full transition-all duration-500", color_class)),
-                        attributes::styles([("width", format!("{}%", percentage))]),
-                    ], []),
-                ]),
-            ]),
-            span([class("text-sm text-ctp-subtext0")], [text(&format!("{}%", percentage))]),
-        ])
-    }
-
-    fn view_settings_page(&self) -> Node<Msg> {
-        div([class("space-y-6")], [
-            div([class("bg-ctp-surface0 rounded-lg shadow-lg p-8 border border-ctp-surface1")], [
-                h2([class("text-2xl font-bold text-ctp-text mb-6")], [text("Application Settings")]),
-                div([class("space-y-6")], [
-                    div([], [
-                        h3([class("text-lg font-semibold text-ctp-text mb-3")], [text("System Information")]),
-                        div([class("bg-ctp-surface1 rounded-lg p-4 space-y-2 border border-ctp-surface2")], [
-                            self.setting_row("Backend", "Axum + Redis"),
-                            self.setting_row("Frontend", "Sauron + WebAssembly"),
-                            self.setting_row("Database", "Redis (In-memory)"),
-                            self.setting_row("Build", "Docker + GitHub Actions"),
-                        ]),
-                    ]),
-                    div([], [
-                        h3([class("text-lg font-semibold text-ctp-text mb-3")], [text("API Endpoints")]),
-                        div([class("bg-ctp-surface1 rounded-lg p-4 space-y-2 font-mono text-sm border border-ctp-surface2")], [
-                            self.api_row("GET", "/api/tasks", "List all tasks"),
-                            self.api_row("POST", "/api/tasks", "Create new task"),
-                            self.api_row("PUT", "/api/tasks/:id", "Update task"),
-                            self.api_row("DELETE", "/api/tasks/:id", "Delete task"),
-                        ]),
-                    ]),
-                    div([], [
-                        h3([class("text-lg font-semibold text-ctp-text mb-3")], [text("Performance")]),
-                        div([class("bg-ctp-surface1 rounded-lg p-4 border border-ctp-surface2")], [
-                            p([class("text-ctp-subtext1")], [text("WebAssembly provides near-native performance in the browser, while Rust's zero-cost abstractions ensure efficient backend operations.")]),
-                        ]),
-                    ]),
-                ]),
-            ]),
-        ])
-    }
-
-    fn setting_row(&self, key: &str, value: &str) -> Node<Msg> {
-        div([class("flex justify-between items-center")], [
-            span([class("text-ctp-text font-medium")], [text(key)]),
-            span([class("text-ctp-subtext1")], [text(value)]),
-        ])
-    }
-
-    fn api_row(&self, method: &str, endpoint: &str, description: &str) -> Node<Msg> {
-        div([class("flex items-center space-x-4")], [
-            span([class(&format!("px-2 py-1 rounded text-xs font-medium text-ctp-base {}", 
-                match method {
-                    "GET" => "bg-ctp-green",
-                    "POST" => "bg-ctp-blue", 
-                    "PUT" => "bg-ctp-yellow",
-                    "DELETE" => "bg-ctp-red",
-                    _ => "bg-ctp-overlay0"
-                }
-            ))], [text(method)]),
-            span([class("text-ctp-text font-medium")], [text(endpoint)]),
-            span([class("text-ctp-subtext1")], [text(description)]),
-        ])
-    }
     fn view_create_form(&self) -> Node<Msg> {
         div(
             [class("mb-8 p-6 bg-ctp-surface1 rounded-lg border border-ctp-surface2")],
@@ -759,198 +619,199 @@ impl Model {
     }
 
     fn view_task(&self, task: &Task) -> Node<Msg> {
-        let is_editing = self.editing_task == Some(task.id);
-        let is_loading = self.task_loading_states.contains_key(&task.id);
-        
-        // Debug logging for task rendering
-        console::log_1(&format!("[DEBUG] Rendering task - ID: {}, Title: '{}', Completed: {}, Is Editing: {}, Is Loading: {}", 
-            task.id, task.title, task.completed, is_editing, is_loading).into());
-        
-        div(
-            [key(task.id.to_string()),
-            class(&format!(
-                "group border rounded-xl p-6 bg-ctp-surface0 shadow-sm transition-all duration-300 hover:shadow-lg {}",
-                if task.completed { 
-                    "border-ctp-green bg-ctp-green/10" 
-                } else { 
-                    "border-ctp-surface1 hover:border-ctp-blue hover:-translate-y-0.5" 
-                }
-            ))],
-            if is_editing {
-                vec![
-                    div([class("space-y-3")], [
-                        input([
-                            r#type("text"),
-                            value(&self.edit_title),
-                            on_input(|event| Msg::SetEditTitle(event.value())),
-                            class("w-full px-3 py-2 bg-ctp-surface1 border border-ctp-surface2 rounded-md text-ctp-text focus:outline-none focus:ring-2 focus:ring-ctp-blue focus:border-transparent"),
-                        ], []),
-                        textarea([
-                            value(&self.edit_description),
-                            on_input(|event| Msg::SetEditDescription(event.value())),
-                            class("w-full px-3 py-2 bg-ctp-surface1 border border-ctp-surface2 rounded-md text-ctp-text focus:outline-none focus:ring-2 focus:ring-ctp-blue focus:border-transparent h-20 resize-y"),
-                        ], []),
-                        div([class("flex gap-2")], [
-                            button([
-                                on_click({
-                                    let captured_id = task.id;
-                                    move |_| Msg::SaveEdit(captured_id)
-                                }),
-                                class("bg-ctp-green hover:bg-ctp-teal text-ctp-base font-medium px-4 py-2 rounded-md transition-colors duration-200"),
-                                disabled(is_loading),
-                            ], [
-                                if is_loading {
-                                    text("Saving...")
-                                } else {
-                                    text("Save")
-                                }
-                            ]),
-                            button([
-                                on_click(|_| Msg::CancelEdit),
-                                class("bg-ctp-overlay0 hover:bg-ctp-overlay1 text-ctp-text font-medium px-4 py-2 rounded-md transition-colors duration-200"),
-                                disabled(is_loading),
-                            ], [text("Cancel")]),
-                        ]),
-                    ]),
-                ]
+    let is_editing = self.editing_task == Some(task.id);
+    let is_loading = self.task_loading_states.contains_key(&task.id);
+
+    // Debug logging for task rendering
+    console::log_1(&format!("[DEBUG] Rendering task - ID: {}, Title: '{}', Completed: {}, Is Editing: {}, Is Loading: {}",
+        task.id, task.title, task.completed, is_editing, is_loading).into());
+
+    div(
+        [key(task.id.to_string()),
+        class(&format!(
+            "group border rounded-xl p-6 bg-ctp-surface0 shadow-sm transition-all duration-300 hover:shadow-lg {}",
+            if task.completed {
+                "border-ctp-green bg-ctp-green/10"
             } else {
-                vec![
-                    div([class("flex items-start gap-4")], [
-                        // Enhanced checkbox with visual feedback
-                        div([class("flex-shrink-0 pt-1")], [
-                            label([class("relative flex items-center cursor-pointer")], [
-                                input([
-                                    r#type("checkbox"),
-                                    checked(task.completed),
-                                    id(&format!("checkbox-{}", task.id)), // Add unique ID
-                                    on_click({
-                                        let task_id = task.id;
-                                        move |_| Msg::ToggleTask(task_id)
-                                    }),
-                                    class("sr-only"),
-                                    disabled(is_loading),
-                                ], []),
-                                div([class(&format!(
-                                    "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 {}",
-                                    if task.completed {
-                                        "bg-ctp-green border-ctp-green shadow-sm"
-                                    } else {
-                                        "border-ctp-surface2 hover:border-ctp-blue hover:bg-ctp-blue/10"
-                                    }
-                                ))], [
-                                    if task.completed {
-                                        span([class("text-ctp-base text-sm font-bold")], [text("✓")])
-                                    } else if is_loading {
-                                        // Show loading spinner when task is being updated
-                                        span([class("animate-spin text-ctp-blue")], [text("◐")])
-                                    } else {
-                                        span([], [])
-                                    }
-                                ]),
-                            ]),
-                        ]),
-                        
-                        // Task content with improved layout
-                        div([class("flex-1 min-w-0")], [
-                            h3([class(&format!(
-                                "text-lg font-semibold mb-2 transition-all duration-200 {}",
-                                if task.completed { 
-                                    "line-through text-ctp-overlay1" 
-                                } else { 
-                                    "text-ctp-text" 
-                                }
-                            ))], [
-                                if is_loading {
-                                    text(&format!("{} (updating...)", task.title))
-                                } else {
-                                    text(&task.title)
-                                }
-                            ]),
-                            p([class(&format!(
-                                "text-sm leading-relaxed break-words {}",
-                                if task.completed { 
-                                    "text-ctp-overlay0 line-through" 
-                                } else { 
-                                    "text-ctp-subtext1" 
-                                }
-                            ))], [text(&task.description)]),
-                            
-                            // Completion status badge
-                            if task.completed {
-                                div([class("mt-3")], [
-                                    span([class("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-ctp-green/20 text-ctp-green")], [
-                                        span([class("w-1.5 h-1.5 bg-ctp-green rounded-full mr-1.5")], []),
-                                        if is_loading {
-                                            text("Updating...")
-                                        } else {
-                                            text("Completed")
-                                        }
-                                    ])
-                                ])
+                "border-ctp-surface1 hover:border-ctp-blue hover:-translate-y-0.5"
+            }
+        ))],
+        if is_editing {
+            vec![
+                div([class("space-y-3")], [
+                    input([
+                        r#type("text"),
+                        value(&self.edit_title),
+                        on_input(|event| Msg::SetEditTitle(event.value())),
+                        class("w-full px-3 py-2 bg-ctp-surface1 border border-ctp-surface2 rounded-md text-ctp-text focus:outline-none focus:ring-2 focus:ring-ctp-blue focus:border-transparent"),
+                    ], []),
+                    textarea([
+                        value(&self.edit_description),
+                        on_input(|event| Msg::SetEditDescription(event.value())),
+                        class("w-full px-3 py-2 bg-ctp-surface1 border border-ctp-surface2 rounded-md text-ctp-text focus:outline-none focus:ring-2 focus:ring-ctp-blue focus:border-transparent h-20 resize-y"),
+                    ], []),
+                    div([class("flex gap-2")], [
+                        button([
+                            on_click({
+                                let captured_id = task.id;
+                                move |_| Msg::SaveEdit(captured_id)
+                            }),
+                            class("bg-ctp-green hover:bg-ctp-teal text-ctp-base font-medium px-4 py-2 rounded-md transition-colors duration-200"),
+                            disabled(is_loading),
+                        ], [
+                            if is_loading {
+                                text("Saving...")
                             } else {
-                                div([class("mt-3")], [
-                                    span([class("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-ctp-yellow/20 text-ctp-yellow")], [
-                                        span([class("w-1.5 h-1.5 bg-ctp-yellow rounded-full mr-1.5")], []),
-                                        if is_loading {
-                                            text("Updating...")
-                                        } else {
-                                            text("Pending")
-                                        }
-                                    ])
-                                ])
+                                text("Save")
                             }
                         ]),
-                        
-                        // Action buttons with improved styling
-                        div([class("flex-shrink-0")], [
-                            div([class("flex flex-col gap-2")], [
-                                if !task.completed {
-                                    button([
-                                        on_click({
-                                            let captured_id = task.id;
-                                            move |_| Msg::EditTask(captured_id)
-                                        }),
-                                        class("inline-flex items-center justify-center w-8 h-8 rounded-lg bg-ctp-blue/20 text-ctp-blue hover:bg-ctp-blue/30 transition-colors duration-200 group"),
-                                        r#type("button"),
-                                        disabled(is_loading),
-                                    ], [
-                                        span([class("text-sm")], [text("✏️")])
-                                    ])
+                        button([
+                            on_click(|_| Msg::CancelEdit),
+                            class("bg-ctp-overlay0 hover:bg-ctp-overlay1 text-ctp-text font-medium px-4 py-2 rounded-md transition-colors duration-200"),
+                            disabled(is_loading),
+                        ], [text("Cancel")]),
+                    ]),
+                ]),
+            ]
+        } else {
+            vec![
+                div([class("flex items-start gap-4")], [
+                    // Enhanced checkbox with visual feedback
+                    div([class("flex-shrink-0 pt-1")], [
+                        label([class("relative flex items-center cursor-pointer")], [
+                            input([
+                                r#type("checkbox"),
+                                checked(task.completed),
+                                id(&format!("checkbox-{}", task.id)), // Add unique ID
+                                on_click({
+                                    let task_id = task.id;
+                                    move |_| Msg::ToggleTask(task_id)
+                                }),
+                                class("sr-only"),
+                                disabled(is_loading),
+                            ], []),
+                            div([class(&format!(
+                                "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 {}",
+                                if task.completed {
+                                    "bg-ctp-green border-ctp-green shadow-sm"
+                                } else {
+                                    "border-ctp-surface2 hover:border-ctp-blue hover:bg-ctp-blue/10"
+                                }
+                            ))], [
+                                if task.completed {
+                                    span([class("text-ctp-base text-sm font-bold")], [text("✓")])
+                                } else if is_loading {
+                                    // Show loading spinner when task is being updated
+                                    span([class("animate-spin text-ctp-blue")], [text("◐")])
                                 } else {
                                     span([], [])
-                                },
+                                }
+                            ]),
+                        ]),
+                    ]),
+                    
+                    // Task content with improved layout
+                    div([class("flex-1 min-w-0")], [
+                        h3([class(&format!(
+                            "text-lg font-semibold mb-2 transition-all duration-200 {}",
+                            if task.completed {
+                                "line-through text-ctp-overlay1"
+                            } else {
+                                "text-ctp-text"
+                            }
+                        ))], [
+                            if is_loading {
+                                text(&format!("{} (updating...)", task.title))
+                            } else {
+                                text(&task.title)
+                            }
+                        ]),
+                        p([class(&format!(
+                            "text-sm leading-relaxed break-words {}",
+                            if task.completed {
+                                "text-ctp-overlay0 line-through"
+                            } else {
+                                "text-ctp-subtext1"
+                            }
+                        ))], [text(&task.description)]),
+                        
+                        // Completion status badge
+                        if task.completed {
+                            div([class("mt-3")], [
+                                span([class("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-ctp-green/20 text-ctp-green")], [
+                                    span([class("w-1.5 h-1.5 bg-ctp-green rounded-full mr-1.5")], []),
+                                    if is_loading {
+                                        text("Updating...")
+                                    } else {
+                                        text("Completed")
+                                    }
+                                ])
+                            ])
+                        } else {
+                            div([class("mt-3")], [
+                                span([class("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-ctp-yellow/20 text-ctp-yellow")], [
+                                    span([class("w-1.5 h-1.5 bg-ctp-yellow rounded-full mr-1.5")], []),
+                                    if is_loading {
+                                        text("Updating...")
+                                    } else {
+                                        text("Pending")
+                                    }
+                                ])
+                            ])
+                        }
+                    ]),
+                    
+                    // Action buttons with improved styling
+                    div([class("flex-shrink-0")], [
+                        div([class("flex flex-col gap-2")], [
+                            if !task.completed {
                                 button([
                                     on_click({
                                         let captured_id = task.id;
-                                        move |_| Msg::DeleteTask(captured_id)
+                                        move |_| Msg::EditTask(captured_id)
                                     }),
-                                    class(&format!(
-                                        "inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 group {}",
-                                        if task.completed {
-                                            "bg-ctp-overlay0/20 text-ctp-overlay0 hover:bg-ctp-red/20 hover:text-ctp-red"
-                                        } else {
-                                            "bg-ctp-red/20 text-ctp-red hover:bg-ctp-red/30"
-                                        }
-                                    )),
+                                    class("inline-flex items-center justify-center w-8 h-8 rounded-lg bg-ctp-blue/20 text-ctp-blue hover:bg-ctp-blue/30 transition-colors duration-200 group"),
                                     r#type("button"),
                                     disabled(is_loading),
                                 ], [
-                                    span([class("text-sm")], [
-                                        if is_loading {
-                                            text("⏳")
-                                        } else {
-                                            text("🗑️")
-                                        }
-                                    ])
-                                ]),
+                                    span([class("text-sm")], [text("✏️")])
+                                ])
+                            } else {
+                                span([], [])
+                            },
+                            button([
+                                on_click({
+                                    let captured_id = task.id;
+                                    move |_| Msg::DeleteTask(captured_id)
+                                }),
+                                class(&format!(
+                                    "inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 group {}",
+                                    if task.completed {
+                                        "bg-ctp-overlay0/20 text-ctp-overlay0 hover:bg-ctp-red/20 hover:text-ctp-red"
+                                    } else {
+                                        "bg-ctp-red/20 text-ctp-red hover:bg-ctp-red/30"
+                                    }
+                                )),
+                                r#type("button"),
+                                disabled(is_loading),
+                            ], [
+                                span([class("text-sm")], [
+                                    if is_loading {
+                                        text("⏳")
+                                    } else {
+                                        text("🗑️")
+                                    }
+                                ])
                             ]),
                         ]),
                     ]),
-                ]
-            },
-        )
+                ]),
+            ]
+        }
+    )
     }
 }
+
 
 async fn fetch_tasks() -> Result<Vec<Task>, String> {
     let promise = web_sys::window()
