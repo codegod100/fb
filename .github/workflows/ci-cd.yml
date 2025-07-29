@@ -37,4 +37,4 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: rollout restart deployment deployment/fb
+        args: rollout restart deployment/fb
