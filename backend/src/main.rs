@@ -46,11 +46,10 @@ async fn main() {
     let app = Router::new()
         .route("/api/tasks", get(get_tasks).post(create_task))
         .route("/api/tasks/:id", get(get_task).put(update_task).delete(delete_task))
-        // Catch-all routes for client-side routing first
-        .route("/dashboard", get(serve_index))
-        .route("/tasks", get(serve_index)) 
-        // Then serve static files and root
+        // Serve static files first
         .nest_service("/", ServeDir::new("frontend/dist"))
+        // Fallback route for SPA - serves index.html for any unmatched routes
+        .fallback(serve_index)
         .layer(CorsLayer::permissive())
         .with_state(pool);
 
