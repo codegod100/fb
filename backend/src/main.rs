@@ -74,6 +74,9 @@ async fn get_tasks(State(pool): State<RedisPool>) -> Result<Json<Vec<Task>>, Sta
         }
     }
     
+    // Sort by ID to ensure consistent ordering across requests
+    tasks.sort_by(|a, b| a.id.cmp(&b.id));
+    
     Ok(Json(tasks))
 }
 
