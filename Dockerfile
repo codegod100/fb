@@ -1,5 +1,5 @@
 # Multi-stage build for Rust full-stack app
-FROM node:18-alpine as frontend-builder
+FROM node:18-alpine AS frontend-builder
 
 # Install Tailwind CSS
 WORKDIR /app/frontend
@@ -7,12 +7,13 @@ COPY frontend/package.json frontend/tailwind.config.js ./
 COPY frontend/src/input.css ./src/
 RUN npm install
 
-# Build CSS (Rust source files will be copied later for content scanning)
+# Copy Rust source files and HTML for Tailwind content scanning
 COPY frontend/src/ ./src/
+RUN mkdir -p ./dist
 COPY frontend/dist/index.html ./dist/
 RUN npm run build-css
 
-FROM rust:1.75 as rust-builder
+FROM rust:1.75 AS rust-builder
 
 # Install wasm-pack for frontend build
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
